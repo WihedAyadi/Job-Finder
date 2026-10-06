@@ -170,7 +170,7 @@ The workflow:
 3. Publishes `ghcr.io/<owner>/<repository>` on pushes to `main` or `master`.
 4. Triggers Render after the image has been published.
 
-Configure the repository secret `RENDER_DEPLOY_HOOK` with the deploy-hook URL from the Render service. Configure Render to deploy the GHCR image:
+Configure the repository secret `RENDER_DEPLOY_HOOK` with the deploy-hook URL from the Render service. If this secret is not configured, the deploy job is skipped. Configure Render to deploy the GHCR image:
 
 ```text
 ghcr.io/<owner>/<repository>:latest
