@@ -1,0 +1,12 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.env
+.gitignore
+job_finder.db
+*.pdf
+*.log
+job_finder.egg-info

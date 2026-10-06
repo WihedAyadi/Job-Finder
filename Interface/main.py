@@ -20,6 +20,11 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "Interface" / "templates"))
 app = FastAPI(title="Job Finder")
 
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request) -> HTMLResponse:
     selected_source = request.query_params.get("source", "all")

@@ -59,7 +59,38 @@ The application also provides a settings form for entering an optional LangSmith
 
 ## Docker
 
-The application container runs the web server. Ollama remains a separate service because the model is large and is normally managed by the host or a dedicated Ollama service.
+The application container runs the web server and Ollama runs as a separate service because the Granite model is large.
+
+### Docker Compose
+
+The complete local stack can be started with:
+
+```powershell
+docker compose up --build
+```
+
+Compose starts:
+
+- `job-finder` on <http://127.0.0.1:8000>
+- `ollama` on <http://127.0.0.1:11434>
+
+The Ollama service automatically pulls `${OLLAMA_MODEL}` on first startup and stores model data in the `ollama-data` volume. Application data is stored in `job-finder-data`.
+
+Stop the stack with:
+
+```powershell
+docker compose down
+```
+
+To remove persisted models and application data too:
+
+```powershell
+docker compose down --volumes
+```
+
+### Standalone application container
+
+The application container can also use an Ollama instance running on the host:
 
 Build and run:
 
@@ -85,10 +116,10 @@ The SQLite database is stored at `/app/data/job_finder.db` in the container. The
 Run the test suite:
 
 ```powershell
-python -m pytest Tests -q
+python -m pytest Tests --cov=CV --cov=Database --cov=Ingestion.pdf_parser --cov=Search.service --cov-report=term-missing --cov-fail-under=70
 ```
 
-Tests do not require a live Ollama server. A running Ollama instance and `granite3.2:2b` are required for actual CV uploads and AI job ranking.
+The coverage gate measures deterministic application logic. The Ollama transport is intentionally excluded from the threshold because it requires a live model service; it should be covered by a separate integration environment.
 
 ## Configuration
 
@@ -118,11 +149,31 @@ Dockerfile          Container image definition
 
 ## CI/CD
 
-GitHub Actions runs on pushes and pull requests:
+The GitHub Actions workflow in `.github/workflows/ci.yml` implements:
 
-1. Installs the supported Python version.
-2. Installs dependencies.
-3. Runs the test suite.
-4. Builds the Docker image.
+```text
+GitHub
+   ↓
+Tests + coverage (Python 3.12, minimum 70%)
+   ↓
+Docker build
+   ↓
+Push image to GHCR (pushes to main/master)
+   ↓
+Deploy to Render
+```
 
-The pipeline intentionally does not download the Ollama model. Model inference is an external runtime dependency and should be validated in deployment or a separate integration environment.
+The workflow:
+
+1. Runs tests with a 70% coverage gate.
+2. Builds the Docker image on pull requests and pushes.
+3. Publishes `ghcr.io/<owner>/<repository>` on pushes to `main` or `master`.
+4. Triggers Render after the image has been published.
+
+Configure the repository secret `RENDER_DEPLOY_HOOK` with the deploy-hook URL from the Render service. Configure Render to deploy the GHCR image:
+
+```text
+ghcr.io/<owner>/<repository>:latest
+```
+
+The GHCR package must be public, or the Render service must have credentials with permission to pull private packages. The workflow does not download Ollama models; the Compose deployment pulls the model automatically, while hosted deployments should provide a reachable Ollama service.
