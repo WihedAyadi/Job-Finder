@@ -15,7 +15,7 @@ from Ingestion.pdf_parser import extract_text
 from Search.service import API_SOURCES, PUBLIC_SOURCES, search_jobs, source_links
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-repository = Repository(BASE_DIR / "job_finder.db")
+repository = Repository(os.getenv("JOB_FINDER_DB", str(BASE_DIR / "job_finder.db")))
 templates = Jinja2Templates(directory=str(BASE_DIR / "Interface" / "templates"))
 app = FastAPI(title="Job Finder")
 
