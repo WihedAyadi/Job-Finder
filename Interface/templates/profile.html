@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CV profile · Workmatch</title>
+  <style>
+    :root { --ink:#17202b; --muted:#7d8794; --line:#e8ebef; --blue:#4361ee; }
+    * { box-sizing:border-box } body { margin:0; background:#f7f8fa; color:var(--ink); font:14px Inter,system-ui,sans-serif }
+    main { max-width:1050px; margin:auto; padding:42px 22px } a { color:var(--blue); text-decoration:none }
+    .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px } h1 { margin:0 0 6px; font-size:30px; letter-spacing:-.04em } h2 { font-size:17px; margin:0 0 16px }
+    .muted { color:var(--muted) } .button { background:var(--blue); color:white; border:0; border-radius:9px; padding:11px 17px; font-weight:700; cursor:pointer; text-decoration:none }
+    .layout { display:grid; grid-template-columns:1fr 1fr; gap:18px } .card { background:white; border:1px solid var(--line); border-radius:15px; padding:23px; box-shadow:0 5px 20px #202b3d05 } .wide { grid-column:1/-1 }
+    .pill { display:inline-block; background:#eef1ff; color:#485bd6; border-radius:999px; padding:6px 10px; margin:0 5px 7px 0; font-size:12px } .item { padding:14px 0; border-top:1px solid var(--line) } .item:first-of-type { border-top:0; padding-top:0 }
+    @media(max-width:700px){ .layout{grid-template-columns:1fr} .wide{grid-column:auto} .top{align-items:flex-start; gap:15px; flex-direction:column} }
+  </style>
+</head>
+<body><main>
+  <div class="top"><div><a href="/">← Back to dashboard</a><h1>CV profile</h1><div class="muted">Extracted from {{ cv.source_filename }}</div></div><a class="button" href="/">Find matching jobs</a></div>
+  <div class="layout">
+    <section class="card"><h2>Overview</h2><p><strong>Name:</strong> {{ cv.name or "Not detected" }}</p><p><strong>Location:</strong> {{ cv.location or "Not detected" }}</p><p><strong>Experience:</strong> {{ cv.total_experience_years }} years</p><p><strong>Email:</strong> {{ cv.email or "Not detected" }}</p></section>
+    <section class="card"><h2>Perceived profile classes</h2>{% for class in cv.perceived_classes %}<span class="pill">{{ class }}</span>{% else %}<p class="muted">No profile classes detected.</p>{% endfor %}<h2 style="margin-top:20px">Agent search phrase</h2><p>{{ cv.generated_search_phrase() or "Not generated" }}</p></section>
+    <section class="card wide"><h2>Skills</h2>{% for skill in cv.skills %}<span class="pill">{{ skill }}</span>{% else %}<p class="muted">No skills detected.</p>{% endfor %}</section>
+    <section class="card wide"><h2>Experience</h2>{% for role in cv.experience %}<div class="item"><strong>{{ role.title }}</strong><div class="muted">{{ role.company }}{% if role.start_date %} · {{ role.start_date }}{% endif %}{% if role.end_date %} – {{ role.end_date }}{% endif %}</div><p>{{ role.description }}</p></div>{% else %}<p class="muted">No structured experience entries detected. The original CV text is retained for review.</p>{% endfor %}</section>
+    <section class="card wide"><h2>Projects & education</h2>{% for project in cv.projects %}<div class="item"><strong>{{ project.name }}</strong><p>{{ project.description }}</p></div>{% endfor %}{% for item in cv.education %}<div class="item">{{ item }}</div>{% endfor %}</section>
+  </div>
+</main></body></html>
