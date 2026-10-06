@@ -49,3 +49,35 @@ def test_first_line_is_name_and_studies_are_not_experience() -> None:
     assert len(cv.experience) == 1
     assert cv.experience[0].title == "Backend Engineer"
     assert cv.education == ["MSc Computer Science | 2020 - 2021", "BSc Mathematics | 2017 - 2020"]
+
+
+def test_parser_keeps_certifications_and_achievements_separate() -> None:
+    cv = parse_cv(
+        """
+        Sam Taylor
+        CERTIFICATIONS
+        AWS Certified Developer - Associate
+        ACHIEVEMENTS
+        Reduced deployment time by 40%
+        EXPERIENCE
+        Platform Engineer at Example | 2022 - 2025
+        EDUCATION
+        BSc Software Engineering, Example University
+        """,
+        "sam.pdf",
+    )
+
+    assert cv.certifications == ["AWS Certified Developer - Associate"]
+    assert cv.achievements == ["Reduced deployment time by 40%"]
+    assert len(cv.experience) == 1
+    assert cv.education == ["BSc Software Engineering, Example University"]
+
+
+def test_name_is_recovered_before_inline_contact_details() -> None:
+    cv = parse_cv(
+        "WIHED AYADI DATA SCIENTIST | Machine Learning | Python "
+        "wihedayadi@gmail.com | +33 07 60 41 32 20 | France",
+        "wihed.pdf",
+    )
+
+    assert cv.name == "WIHED AYADI"

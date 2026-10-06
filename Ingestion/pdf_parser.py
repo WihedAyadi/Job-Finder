@@ -1,14 +1,21 @@
 from io import BytesIO
+from pathlib import Path
 import re
+from typing import BinaryIO
+
 from CV.models import CV, Experience, Project
 
 from pypdf import PdfReader
 
 
-def extract_text(pdf_bytes: bytes) -> str:
-    """Extract text from a text-based PDF and fail clearly for empty documents."""
-    reader = PdfReader(BytesIO(pdf_bytes))
-    text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
+def extract_text(pdf_file: bytes | bytearray | BinaryIO | str | Path) -> str:
+    """Extract normalized text from PDF bytes, paths, or seekable file objects."""
+    source = BytesIO(bytes(pdf_file)) if isinstance(pdf_file, (bytes, bytearray)) else pdf_file
+    if hasattr(source, "seek"):
+        source.seek(0)
+    reader = PdfReader(source)
+    text = "\n".join((page.extract_text() or "") for page in reader.pages)
+    text = _normalize_text(text)
     if not text:
         raise ValueError("The PDF contains no extractable text.")
     return text
@@ -27,8 +34,10 @@ _CLASS_RULES = {
 }
 _SECTION_ALIASES = {
     "experience": ("experience", "professional experience", "work experience", "employment", "work history"),
-    "projects": ("projects", "selected projects", "personal projects", "portfolio"),
+    "projects": ("projects", "key projects", "selected projects", "personal projects", "portfolio"),
     "education": ("education", "academic background", "academic qualifications"),
+    "certifications": ("certifications", "certificates", "licenses"),
+    "achievements": ("achievements", "accomplishments", "awards"),
     "skills": ("skills", "technical skills", "core skills", "competencies", "technologies"),
 }
 
@@ -60,6 +69,8 @@ def parse_cv(text: str, filename: str) -> CV:
         for line in _section(text, _SECTION_ALIASES["education"]).splitlines()
         if line.strip()
     ]
+    certifications = _list_section(text, _SECTION_ALIASES["certifications"])
+    achievements = _list_section(text, _SECTION_ALIASES["achievements"])
     return CV(
         name=_cv_name(text),
         email=_first_match(text, r"[\w.+-]+@[\w-]+\.[\w.-]+"),
@@ -69,6 +80,8 @@ def parse_cv(text: str, filename: str) -> CV:
         experience=experience,
         projects=projects,
         education=education,
+        certifications=certifications,
+        achievements=achievements,
         perceived_classes=classes,
         total_experience_years=experience_years,
         search_phrase=_fallback_search_phrase(experience, classes, skills),
@@ -78,19 +91,24 @@ def parse_cv(text: str, filename: str) -> CV:
 
 def _section(text: str, headings: tuple[str, ...]) -> str:
     lines = text.splitlines()
-    start = next(
-        (index for index, line in enumerate(lines) if _is_heading(line, headings)),
-        None,
-    )
+    start = next((index for index, line in enumerate(lines) if _is_heading(line, headings)), None)
     if start is None:
-        return ""
+        for index, line in enumerate(lines):
+            prefix = _heading_prefix(line, headings)
+            if prefix is not None:
+                lines[index] = prefix
+                start = index
+                break
+        if start is None:
+            return ""
     other_headings = tuple(
         heading for aliases in _SECTION_ALIASES.values() for heading in aliases
-    ) + ("certifications", "summary", "profile")
+    ) + ("certifications", "certificates", "licenses", "achievements", "accomplishments", "awards", "summary", "profile")
     end = next(
         (
             index for index in range(start + 1, len(lines))
             if _is_heading(lines[index], other_headings)
+            or _heading_prefix(lines[index], other_headings) is not None
         ),
         len(lines),
     )
@@ -106,6 +124,21 @@ def _parse_skill_section(text: str) -> set[str]:
         if 1 < len(candidate.strip()) < 80
         and not _is_heading(candidate, _SECTION_ALIASES["skills"])
     }
+
+
+def _list_section(text: str, headings: tuple[str, ...]) -> list[str]:
+    section = _section(text, headings)
+    return [
+        re.sub(r"\s+", " ", line.strip("•-* \t"))
+        for line in section.splitlines()
+        if line.strip()
+    ]
+
+
+def _normalize_text(text: str) -> str:
+    text = text.replace("\u00a0", " ")
+    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in text.splitlines()]
+    return "\n".join(line for line in lines if line)
 
 
 def _unique_skills(skills: set[str]) -> list[str]:
@@ -126,9 +159,34 @@ def _is_heading(line: str, headings: tuple[str, ...]) -> bool:
     }
 
 
+def _heading_prefix(line: str, headings: tuple[str, ...]) -> str | None:
+    normalized = line.strip()
+    lowered = normalized.casefold()
+    for heading in sorted(headings, key=len, reverse=True):
+        if lowered.startswith(heading.casefold() + " ") or lowered.startswith(heading.casefold() + ":"):
+            return normalized[len(heading):].lstrip(" :|-")
+    return None
+
+
 def _cv_name(text: str) -> str:
     first_line = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    if first_line:
+        first_line = re.split(
+            r"\s+(?:[\w.+-]+@[\w-]+\.[\w.-]+|\+?\d[\d\s().-]{7,})",
+            first_line,
+            maxsplit=1,
+        )[0].strip(" |•-")
     if first_line and not _looks_like_contact_or_heading(first_line):
+        first_line = re.split(r"\s*[|•]\s*", first_line, maxsplit=1)[0].strip()
+        title_markers = (
+            " data scientist", " data engineer", " software engineer",
+            " machine learning", " developer", " analyst", " designer",
+        )
+        lowered = first_line.casefold()
+        for marker in title_markers:
+            if marker in lowered:
+                first_line = first_line[:lowered.index(marker)].strip()
+                break
         return first_line
     return _first_match(
         text,

@@ -29,9 +29,13 @@ class CV(BaseModel):
     experience: list[Experience] = Field(default_factory=list)
     projects: list[Project] = Field(default_factory=list)
     education: list[str] = Field(default_factory=list)
+    certifications: list[str] = Field(default_factory=list)
+    achievements: list[str] = Field(default_factory=list)
     perceived_classes: list[str] = Field(default_factory=list)
     total_experience_years: float = 0
     search_phrase: str = ""
+    document_hash: str = ""
+    parser: str = "unverified"
     source_filename: str | None = None
 
     def searchable_terms(self) -> set[str]:

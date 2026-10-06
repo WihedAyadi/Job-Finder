@@ -15,12 +15,14 @@
   </style>
 </head>
 <body><main>
-  <div class="top"><div><a href="/">← Back to dashboard</a><h1>CV profile</h1><div class="muted">Extracted from {{ cv.source_filename }}</div></div><a class="button" href="/">Find matching jobs</a></div>
+  <div class="top"><div><a href="/">← Back to dashboard</a><h1>CV profile</h1><div class="muted">Extracted from {{ cv.source_filename }} · Parser: {{ cv.parser }}</div></div><a class="button" href="/">Find matching jobs</a></div>
   <div class="layout">
     <section class="card"><h2>Overview</h2><p><strong>Name:</strong> {{ cv.name or "Not detected" }}</p><p><strong>Location:</strong> {{ cv.location or "Not detected" }}</p><p><strong>Experience:</strong> {{ cv.total_experience_years }} years</p><p><strong>Email:</strong> {{ cv.email or "Not detected" }}</p></section>
     <section class="card"><h2>Perceived profile classes</h2>{% for class in cv.perceived_classes %}<span class="pill">{{ class }}</span>{% else %}<p class="muted">No profile classes detected.</p>{% endfor %}<h2 style="margin-top:20px">Agent search phrase</h2><p>{{ cv.generated_search_phrase() or "Not generated" }}</p></section>
     <section class="card wide"><h2>Skills</h2>{% for skill in cv.skills %}<span class="pill">{{ skill }}</span>{% else %}<p class="muted">No skills detected.</p>{% endfor %}</section>
     <section class="card wide"><h2>Experience</h2>{% for role in cv.experience %}<div class="item"><strong>{{ role.title }}</strong><div class="muted">{{ role.company }}{% if role.start_date %} · {{ role.start_date }}{% endif %}{% if role.end_date %} – {{ role.end_date }}{% endif %}</div><p>{{ role.description }}</p></div>{% else %}<p class="muted">No structured experience entries detected. The original CV text is retained for review.</p>{% endfor %}</section>
     <section class="card wide"><h2>Projects & education</h2>{% for project in cv.projects %}<div class="item"><strong>{{ project.name }}</strong><p>{{ project.description }}</p></div>{% endfor %}{% for item in cv.education %}<div class="item">{{ item }}</div>{% endfor %}</section>
+    <section class="card"><h2>Certifications</h2>{% for item in cv.certifications %}<div class="item">{{ item }}</div>{% else %}<p class="muted">None detected.</p>{% endfor %}</section>
+    <section class="card"><h2>Achievements</h2>{% for item in cv.achievements %}<div class="item">{{ item }}</div>{% else %}<p class="muted">None detected.</p>{% endfor %}</section>
   </div>
 </main></body></html>

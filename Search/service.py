@@ -6,7 +6,7 @@ from urllib.parse import quote_plus
 import httpx
 
 from CV.models import CV
-from Ingestion.agent import rank_jobs_with_openrouter
+from Ingestion.agent import rank_jobs_with_ollama
 
 ARBEITNOW_API = "https://www.arbeitnow.com/api/job-board-api"
 REMOTIVE_API = "https://remotive.com/api/remote-jobs"
@@ -52,6 +52,7 @@ def _job_from_api(item: dict[str, Any], cv: CV, source: str) -> dict[str, Any]:
             "posted_at": item.get("created_at", "Not specified"),
             "experience_required_years": required,
             "source_url": item.get("url", ""),
+            "search_query": build_search_query(cv),
         },
     }
 
@@ -63,9 +64,16 @@ async def search_jobs(
     selected_sources = [source for source in selected_sources if source in API_SOURCES]
     if not selected_sources:
         raise ValueError("Select at least one supported job source.")
+    query = build_search_query(cv)
     async with httpx.AsyncClient(timeout=15) as client:
         responses = await asyncio.gather(
-            *(client.get(API_SOURCES[source]) for source in selected_sources),
+            *(
+                client.get(
+                    API_SOURCES[source],
+                    params=_source_params(source, query),
+                )
+                for source in selected_sources
+            ),
             return_exceptions=True,
         )
     jobs: list[dict[str, Any]] = []
@@ -80,7 +88,23 @@ async def search_jobs(
     if not jobs and all(isinstance(response, Exception) for response in responses):
         raise httpx.HTTPError("All job sources are unavailable.")
     jobs = list({job["external_id"]: job for job in jobs}.values())
-    return rank_jobs_with_openrouter(cv, jobs)[:limit]
+    return rank_jobs_with_ollama(cv, jobs)[:limit]
+
+
+def build_search_query(cv: CV) -> str:
+    """Build the job-search query from the fetched CV's agent intent and profile."""
+    phrase = cv.generated_search_phrase().strip()
+    if phrase:
+        return phrase
+    return " ".join(sorted(cv.searchable_terms()))
+
+
+def _source_params(source: str, query: str) -> dict[str, str]:
+    if source == "Remotive":
+        return {"search": query}
+    if source == "Jobicy":
+        return {"search": query}
+    return {}
 
 
 def source_links(cv: CV) -> dict[str, str]:

@@ -69,7 +69,14 @@ class Repository:
                 (external_id, title, company, location, url, description, source, matched_terms, details)
                 VALUES (:external_id, :title, :company, :location, :url, :description, :source, :matched_terms, :details)
                 ON CONFLICT(external_id) DO UPDATE SET
-                    matched_terms = excluded.matched_terms
+                    title = excluded.title,
+                    company = excluded.company,
+                    location = excluded.location,
+                    url = excluded.url,
+                    description = excluded.description,
+                    source = excluded.source,
+                    matched_terms = excluded.matched_terms,
+                    details = excluded.details
                 """,
                 [
                     {
@@ -80,6 +87,13 @@ class Repository:
                     for job in jobs
                 ],
             )
+
+    def replace_jobs(self, jobs: list[dict], sources: list[str]) -> None:
+        """Replace the previous result set for the sources used by one search."""
+        placeholders = ", ".join("?" for _ in sources)
+        with self._connect() as connection:
+            connection.execute(f"DELETE FROM jobs WHERE source IN ({placeholders})", sources)
+        self.save_jobs(jobs)
 
     def list_jobs(self, limit: int = 50) -> list[dict]:
         with self._connect() as connection:
