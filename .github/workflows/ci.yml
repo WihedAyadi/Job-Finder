@@ -95,7 +95,7 @@ jobs:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
-            echo "RENDER_DEPLOY_HOOK is required for deployment."
-            exit 1
+            echo "RENDER_DEPLOY_HOOK is not set; skipping Render deployment."
+            exit 0
           fi
           curl --fail --silent --show-error -X POST "$RENDER_DEPLOY_HOOK"
